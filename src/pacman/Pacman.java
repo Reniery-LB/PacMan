@@ -13,11 +13,15 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.Timer;
+
 import java.awt.Font;
 import javax.swing.JLabel;
 import javax.swing.ImageIcon;
@@ -27,8 +31,10 @@ public class Pacman implements KeyListener{
 
 	private JFrame frame;
 	private DrawingPanel tablero;
-	private int x = 205, y = 250;
-
+	private Player pacman;
+	private List<Player> paredes = new ArrayList<>();
+	Timer timer;
+	private int velocidad = 10;
 	/**
 	 * Launch the application.
 	 */
@@ -63,6 +69,12 @@ public class Pacman implements KeyListener{
 		frame.setBounds(100, 100, 450, 750);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setLocationRelativeTo(null);
+          
+		pacman = new Player(200, 200, 30, 30, Color.yellow);
+		
+		paredes.add(new Player(120, 300, 200, 30, Color.orange));
+		paredes.add(new Player(120, 50, 200, 30, Color.orange));
+		paredes.add(new Player(400, 50, 30, 200, Color.magenta));
 
 		JPanel pnl_norte = new JPanel();
 		pnl_norte.setBackground(new Color(0, 0, 128));
@@ -105,8 +117,8 @@ public class Pacman implements KeyListener{
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				x = 205;
-				y = 250;
+				pacman.x = 200;
+				pacman.y = 200;
 				
 				tablero.repaint();
 				tablero.requestFocus();
@@ -115,29 +127,63 @@ public class Pacman implements KeyListener{
 		});
 		footer.add(reiniciar);
 		
+		JPanel panelDer = new JPanel();
+		panelDer.setBackground(new Color(255, 255, 0));
+		frame.getContentPane().add(panelDer, BorderLayout.EAST);
+		
+		JPanel panelIzq = new JPanel();
+		panelIzq.setBackground(new Color(255, 255, 0));
+		frame.getContentPane().add(panelIzq, BorderLayout.WEST);
+	
+		timer = new Timer(50, new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				tablero.repaint();
+				
+			}
+		});
+		timer.start();
 	}
+	
 	   class DrawingPanel extends JPanel {
-		   private Image fondo;
-	        public DrawingPanel() {
-	            setBackground(Color.WHITE);
-	            fondo = new ImageIcon("img/fondo.jpg").getImage();
-	        }
 	        
-	        
-
 	        @Override
 	        protected void paintComponent(Graphics g) {
 	            super.paintComponent(g);
 	            Graphics2D g2d = (Graphics2D) g;
 	            
-	            if(fondo != null) {
-	            	g2d.drawImage(fondo, 0, 0, getWidth(), getHeight(), this);
-	            }
-	            g2d.setColor(Color.yellow);
-	            g2d.fillOval(x,y, 30, 30);
+	 
+	            g2d.setColor(pacman.c);
+	            g2d.fillOval(pacman.x, pacman.y, pacman.w, pacman.h);
 	            
+	            for(Player pared : paredes) {
+	            	g2d.setColor(pared.c);
+	            	g2d.fillRect(pared.x, pared.y, pared.w, pared.h);  	
+	            }
 	        }
 	    }
+	   
+	   class Player{
+		   
+		   int x,y,w,h;
+		   Color c;
+		   
+		   public Player(int x,int y,int w, int h, Color c) {
+			   this.x = x;
+			   this.y = y;
+			   this.w = w;
+			   this.h = h;
+			   this.c = c;
+		   }
+		   
+		    public boolean colision(Player target) {
+		        return this.x < target.x + target.w &&
+		               this.x + this.w > target.x &&
+		               this.y < target.y + target.h &&
+		               this.y + this.h > target.y;
+		    }
+		}
 	@Override
 	public void keyTyped(KeyEvent e) {
 //		System.out.println(e.getKeyCode());
@@ -145,36 +191,98 @@ public class Pacman implements KeyListener{
 
 	@Override
 	public void keyPressed(KeyEvent e) {
-//		System.out.println(y);
-		if(e.getKeyCode() == 87) { //TECLA W
-			y-=5;
-			//LIMITE DE ARRIBA
-			if (y <= -30) {
-				y =+ 585 ;
+//	System.out.println(x);
+		int keyCode = e.getKeyCode();
+		int newX = pacman.x;
+		int newY = pacman.y;
+		
+		switch(keyCode) {
+		case KeyEvent.VK_W:
+			newY -= velocidad;
+			break;
+		case KeyEvent.VK_S:
+			newY += velocidad;
+			break;
+		case KeyEvent.VK_A:
+			newX -= velocidad;
+			break;
+		case KeyEvent.VK_D:
+			newX += velocidad;
+			break;	
+		}
+		
+		Boolean puedeMoverse = true;
+		Player temp_pacman = new Player(newX, newY, pacman.w, pacman.h, pacman.c);
+		
+		for (Player pared: paredes) {
+			if (temp_pacman.colision(pared)) {
+				puedeMoverse = false;
+				break;
 			}
 		}
-		if(e.getKeyCode() == 83) { //TECLA S
-			y+=5;
-			//LIMITE DE ABAJO
-			if (y >= 585) {
-				y =+ -35;
-			}
+		
+		if (puedeMoverse) {
+			pacman.x = newX;
+			pacman.y = newY;
 		}
-		if(e.getKeyCode() == 65) { //TECLA A
-			x-=5;
-			//LIMITE DE LA IZQUIERDA
-			if (x <= -30) {
-				x =+ 445;
-			}
-
-		}
-		if(e.getKeyCode() == 68) { //TECLA D
-			x+=5;
-			//LIMITE DE LA DERECHA
-			if(x >= 445) {
-				x =-25;
-			}
-		}
+		
+       if (pacman.x <= -pacman.w) {
+            pacman.x = tablero.getWidth();
+        } else if (pacman.x >= tablero.getWidth()) {
+            pacman.x = -pacman.w;
+        }
+        
+        if (pacman.y <= -pacman.h) {
+            pacman.y = tablero.getHeight();
+        } else if (pacman.y >= tablero.getHeight()) {
+            pacman.y = -pacman.h;
+        }
+	        
+		
+//		if(e.getKeyCode() == 87) { //TECLA W
+//			if(!colision) {
+//				y-=1;	
+//			}
+//			else {
+//				y+=1;
+//			}
+//			//LIMITE DE ARRIBA
+//			if (y <= -30) {
+//				y =+ 585 ;
+//			}
+//		}
+//		if(e.getKeyCode() == 83) { //TECLA S
+//			if(!colision) {
+//				y+=1;				
+//			}
+//			else {
+//				y-=1;
+//			}
+//			//LIMITE DE ABAJO
+//			if (y >= 585) {
+//				y =+ -35;
+//			}
+//		}
+//		if(e.getKeyCode() == 65) { //TECLA A
+//			if(!colision) {
+//				x-=1;				
+//			}
+//			else {
+//				
+//			}
+//			//LIMITE DE LA IZQUIERDA
+//			if (x <= -30) {
+//				x =+ 445;
+//			}
+//
+//		}
+//		if(e.getKeyCode() == 68) { //TECLA D
+//			x+=1;
+//			//LIMITE DE LA DERECHA
+//			if(x >= 445) {
+//				x =-25;
+//			}
+//		}
 		tablero.repaint();
 	}
 
